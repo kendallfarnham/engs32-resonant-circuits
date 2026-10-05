@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RLC Circuit Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #eef2f7;
+    --bg-grid: rgba(22,35,58,0.05);
+    --panel-bg: #ffffff;
+    --panel-bg-2: #f7f9fc;
+    --ink: #16233a;
+    --muted: #5b6b85;
+    --faint: #8794ab;
+    --border: #c9d4e3;
+    --border-strong: #a9b8cf;
+    --accent: #3461c1;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(52,97,193,0.12);
+    --mag-color: #b8860b;
+    --phase-color: #0e7490;
+    --marker-color: #c23b3b;
+    --scope-bg: #fbfcfe;
+    --scope-grid: rgba(22,35,58,0.10);
+    --scope-grid-strong: rgba(22,35,58,0.22);
+    --danger: #c23b3b;
+    --radius: 7px;
+    --sans: 'Space Grotesk', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #0b1320;
+      --bg-grid: rgba(150,180,220,0.045);
+      --panel-bg: #101b2d;
+      --panel-bg-2: #0c1727;
+      --ink: #e7edf6;
+      --muted: #93a3bf;
+      --faint: #5e6d88;
+      --border: #263954;
+      --border-strong: #32486b;
+      --accent: #5b86e8;
+      --accent-ink: #081021;
+      --accent-soft: rgba(91,134,232,0.18);
+      --mag-color: #f2c14e;
+      --phase-color: #4dd0e1;
+      --marker-color: #ef6a6a;
+      --scope-bg: #0a1220;
+      --scope-grid: rgba(150,180,220,0.10);
+      --scope-grid-strong: rgba(150,180,220,0.24);
+      --danger: #ef6a6a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1320;
+    --bg-grid: rgba(150,180,220,0.045);
+    --panel-bg: #101b2d;
+    --panel-bg-2: #0c1727;
+    --ink: #e7edf6;
+    --muted: #93a3bf;
+    --faint: #5e6d88;
+    --border: #263954;
+    --border-strong: #32486b;
+    --accent: #5b86e8;
+    --accent-ink: #081021;
+    --accent-soft: rgba(91,134,232,0.18);
+    --mag-color: #f2c14e;
+    --phase-color: #4dd0e1;
+    --marker-color: #ef6a6a;
+    --scope-bg: #0a1220;
+    --scope-grid: rgba(150,180,220,0.10);
+    --scope-grid-strong: rgba(150,180,220,0.24);
+    --danger: #ef6a6a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 1px 1px, var(--bg-grid) 1px, transparent 1px) 0 0/22px 22px,
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.45;
+  }
+  ::selection { background: var(--accent-soft); }
+
+  a { color: var(--accent); }
+
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 24px 48px;
+  }
+
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  header.top h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  header.top p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    max-width: 52ch;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+  }
+  .tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 9px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .tab:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 330px 1fr;
+    grid-template-areas:
+      "schem charts"
+      "ctrl  charts";
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .layout {
+      grid-template-columns: 1fr;
+      grid-template-areas: "schem" "charts" "ctrl";
+    }
+  }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .panel + .panel { margin-top: 18px; }
+  .panel h2 {
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+
+  .schem-panel { grid-area: schem; }
+  .ctrl-panel { grid-area: ctrl; }
+  .charts-panel { grid-area: charts; }
+
+  svg#schematic {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .sch-wire { stroke: var(--ink); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .sch-outline { stroke: var(--ink); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .sch-node { fill: var(--ink); }
+  .sch-label { fill: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 500; }
+  .sch-value { fill: var(--accent); font-family: var(--mono); font-size: 11.5px; font-weight: 500; }
+  .sch-probe { fill: var(--marker-color); font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  .sch-dash { stroke: var(--faint); stroke-width: 1.2; stroke-dasharray: 3 3; fill: none; }
+
+  .topo-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 10px 2px 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    margin-top: 2px;
+  }
+  .stat {
+    padding: 8px 0;
+  }
+  .stat .k {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .stat .v small { color: var(--faint); font-size: 11px; font-weight: 400; margin-left: 2px;}
+
+  .formula-box {
+    margin-top: 12px;
+    padding: 12px 13px;
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    overflow-x: auto;
+  }
+  .formula-box .cap { font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  .presets {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .preset-btn {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--panel-bg-2);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .control-row { margin-bottom: 16px; }
+  .control-row:last-child { margin-bottom: 0; }
+  .control-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    gap: 10px;
+  }
+  .control-head label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .control-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    width: 92px;
+    text-align: right;
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--ink);
+    padding: 3px 6px;
+  }
+  .control-value:focus { border-color: var(--accent); }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px; height: 15px;
+    margin-top: -5.5px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--panel-bg);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 2px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--panel-bg);
+  }
+
+  .loss-group {
+    margin-top: 2px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .loss-group .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    color: var(--muted);
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .hidden { display: none !important; }
+
+  .freq-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .freq-row input[type="text"] {
+    width: 78px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--ink);
+    padding: 4px 6px;
+  }
+  .freq-row label { display:flex; align-items:center; gap:6px; }
+  .freq-row .auto-toggle { display:flex; align-items:center; gap:6px; margin-left: auto; }
+
+  .chart-block { margin-bottom: 14px; }
+  .chart-block:last-child { margin-bottom: 0; }
+  .chart-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .chart-title h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+  .chart-title .swatch {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .chart-title .unit { font-size: 11.5px; color: var(--faint); font-family: var(--mono); }
+  .chart-wrap {
+    position: relative;
+    background: var(--scope-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  canvas.chart-canvas {
+    display: block;
+    width: 100%;
+    height: 190px;
+    cursor: crosshair;
+  }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 6px 9px;
+    border-radius: 5px;
+    line-height: 1.5;
+    white-space: nowrap;
+    transform: translate(-50%, -110%);
+    opacity: 0;
+    transition: opacity .08s ease;
+    z-index: 5;
+  }
+  .tooltip.show { opacity: 1; }
+
+  footer.note {
+    margin-top: 22px;
+    font-size: 12px;
+    color: var(--faint);
+    max-width: 90ch;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>RLC Circuit Explorer</h1>
+      <p>Adjust component values and watch the magnitude and phase response shift in real time, across three resonant topologies.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Circuit topology">
+      <button class="tab" role="tab" data-topo="series" aria-selected="true">Series RLC</button>
+      <button class="tab" role="tab" data-topo="parallel" aria-selected="false">Parallel RLC</button>
+      <button class="tab" role="tab" data-topo="resonator" aria-selected="false">Real LC resonator</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <div class="schem-panel">
+      <div class="panel">
+        <h2 id="schemHeading">Circuit</h2>
+        <svg id="schematic" viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg"></svg>
+        <p class="topo-note" id="topoNote"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Readouts</h2>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="formula-box" id="formulaBox"></div>
+      </div>
+    </div>
+
+    <div class="charts-panel">
+      <div class="panel">
+        <div class="chart-block">
+          <div class="chart-title">
+            <h3><span class="swatch" style="background:var(--mag-color)"></span>Magnitude response</h3>
+            <span class="unit">|H(jω)| — dB</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas class="chart-canvas" id="magCanvas"></canvas>
+            <div class="tooltip" id="magTooltip"></div>
+          </div>
+        </div>
+        <div class="chart-block">
+          <div class="chart-title">
+            <h3><span class="swatch" style="background:var(--phase-color)"></span>Phase response</h3>
+            <span class="unit">∠H(jω) — degrees</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas class="chart-canvas" id="phaseCanvas"></canvas>
+            <div class="tooltip" id="phaseTooltip"></div>
+          </div>
+        </div>
+
+        <div class="freq-row">
+          <label>min <input type="text" id="fMinInput"> Hz</label>
+          <label>max <input type="text" id="fMaxInput"> Hz</label>
+          <div class="auto-toggle">
+            <input type="checkbox" id="autoRangeToggle" checked>
+            <label for="autoRangeToggle">Auto-range around resonance</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-panel">
+      <div class="panel">
+        <h2>Component values</h2>
+        <div class="presets" id="presetRow"></div>
+        <div id="controlsHost"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="note">
+    H(jω) is the complex voltage transfer function Vout⁄Vs. Magnitude is plotted as 20·log₁₀|H|, phase as the unwrapped angle of H in degrees. Resonant frequency and Q are both derived two ways: analytically from L and C, and numerically from the swept curve's peak and −3 dB bandwidth — the two will diverge once loss resistances or heavy loading add real damping.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------------
+   * Complex number helpers
+   * ------------------------------------------------------------- */
+  const C = {
+    add: (a,b) => ({re:a.re+b.re, im:a.im+b.im}),
+    sub: (a,b) => ({re:a.re-b.re, im:a.im-b.im}),
+    mul: (a,b) => ({re:a.re*b.re-a.im*b.im, im:a.re*b.im+a.im*b.re}),
+    div: (a,b) => { const d=b.re*b.re+b.im*b.im; return {re:(a.re*b.re+a.im*b.im)/d, im:(a.im*b.re-a.re*b.im)/d}; },
+    inv: (a) => C.div({re:1,im:0}, a),
+    abs: (a) => Math.hypot(a.re, a.im),
+    ang: (a) => Math.atan2(a.im, a.re),
+    re: (v) => ({re:v, im:0})
+  };
+
+  /* ---------------------------------------------------------------
+   * Application state
+   * ------------------------------------------------------------- */
+  const state = {
+    topology: 'series',
+    L: 1e-3,
+    C: 1e-6,
+    Rs: 50,
+    Rload: 50,
+    RLloss: 1,
+    RCloss: 0.1,
+    autoRange: true,
+    fMin: null,
+    fMax: null
+  };
+
+  const RANGES = {
+    L:       { min:-6, max: 1,  unit:'H' },
+    C:       { min:-12, max:-4, unit:'F' },
+    Rs:      { min:-1, max: 5,  unit:'Ω' },
+    Rload:   { min:-1, max: 5,  unit:'Ω' },
+    RLloss:  { min:-2, max: 3,  unit:'Ω' },
+    RCloss:  { min:-3, max: 3,  unit:'Ω' }
+  };
+
+  /* ---------------------------------------------------------------
+   * Engineering-notation formatting / parsing
+   * ------------------------------------------------------------- */
+  const PREFIXES = [
+    {exp:-12, sym:'p'}, {exp:-9, sym:'n'}, {exp:-6, sym:'µ'}, {exp:-3, sym:'m'},
+    {exp:0, sym:''}, {exp:3, sym:'k'}, {exp:6, sym:'M'}, {exp:9, sym:'G'}
+  ];
+
+  function formatEng(value, unit){
+    if (!isFinite(value)) return '—';
+    if (value === 0) return '0 ' + unit;
+    const sign = value < 0 ? '-' : '';
+    const av = Math.abs(value);
+    let exp3 = Math.floor(Math.log10(av) / 3) * 3;
+    exp3 = Math.max(-12, Math.min(9, exp3));
+    const p = PREFIXES.find(pp => pp.exp === exp3) || {exp:0, sym:''};
+    const scaled = av / Math.pow(10, p.exp);
+    let decimals = scaled < 10 ? 2 : (scaled < 100 ? 1 : 0);
+    return `${sign}${scaled.toFixed(decimals)} ${p.sym}${unit}`;
+  }
+
+  function parseEng(str, unit){
+    if (typeof str !== 'string') return null;
+    let s = str.trim().replace(/,/g, '');
+    // strip trailing unit text (ohm symbol, F, H, Hz, etc.)
+    s = s.replace(/(ohm|ohms|Ω|F|H|Hz)\s*$/i, '').trim();
+    const m = s.match(/^([+-]?[0-9]*\.?[0-9]+)\s*([pnuµmkMG]?)$/);
+    if (!m) return null;
+    const num = parseFloat(m[1]);
+    if (!isFinite(num)) return null;
+    const sym = m[2];
+    const map = {p:-12, n:-9, u:-6, 'µ':-6, m:-3, '':0, k:3, M:6, G:9};
+    if (!(sym in map)) return null;
+    return num * Math.pow(10, map[sym]);
+  }
+
+  function formatFreqShort(f){
+    if (f >= 1e9) return (f/1e9).toFixed(f>=1e10?0:1) + 'G';
+    if (f >= 1e6) return (f/1e6).toFixed(f>=1e7?0:1) + 'M';
+    if (f >= 1e3) return (f/1e3).toFixed(f>=1e4?0:1) + 'k';
+    if (f >= 1) return f.toFixed(f>=10?0:1);
+    return f.toFixed(2);
+  }
+
+  /* ---------------------------------------------------------------
+   * Transfer functions
+   * ------------------------------------------------------------- */
+  function computeH(f, s, topo){
+    const w = 2*Math.PI*f;
+    if (topo === 'series'){
+      const Zl = {re:0, im: w*s.L};
+      const Zc = {re:0, im: -1/(w*s.C)};
+      const Ztot = C.add(C.add({re:s.Rs+s.Rload, im:0}, Zl), Zc);
+      return C.div({re:s.Rload, im:0}, Ztot);
+    }
+    if (topo === 'parallel'){
+      const Yl = C.inv({re:0, im: w*s.L});
+      const Yc = {re:0, im: w*s.C};
+      const Yr = {re:1/s.Rload, im:0};
+      const Zp = C.inv(C.add(C.add(Yl,Yc),Yr));
+      return C.div(Zp, C.add({re:s.Rs, im:0}, Zp));
+    }
+    // resonator
+    const Zlb = {re:s.RLloss, im: w*s.L};
+    const Zcb = {re:s.RCloss, im: -1/(w*s.C)};
+    const Y = C.add(C.add(C.inv(Zlb), C.inv(Zcb)), {re:1/s.Rload, im:0});
+    const Zp = C.inv(Y);
+    return C.div(Zp, C.add({re:s.Rs, im:0}, Zp));
+  }
+
+  function idealF0(s){
+    return 1/(2*Math.PI*Math.sqrt(s.L*s.C));
+  }
+
+  /* ---------------------------------------------------------------
+   * Sweep + analysis
+   * ------------------------------------------------------------- */
+  const N_POINTS = 480;
+
+  function sweep(){
+    const f0 = idealF0(state);
+    let fmin, fmax;
+    if (state.autoRange){
+      fmin = f0/100; fmax = f0*100;
+      state.fMin = fmin; state.fMax = fmax;
+    } else {
+      fmin = state.fMin; fmax = state.fMax;
+    }
+    if (!(fmin > 0) || !(fmax > fmin)) { fmin = f0/100; fmax = f0*100; }
+
+    const freqs = new Array(N_POINTS);
+    const magDb = new Array(N_POINTS);
+    const phaseDeg = new Array(N_POINTS);
+    const logMin = Math.log10(fmin), logMax = Math.log10(fmax);
+
+    let prevAngle = null, unwrapOffset = 0;
+    let peakIdx = 0, peakVal = -Infinity;
+
+    for (let i=0;i<N_POINTS;i++){
+      const t = i/(N_POINTS-1);
+      const f = Math.pow(10, logMin + t*(logMax-logMin));
+      const H = computeH(f, state, state.topology);
+      const mag = C.abs(H);
+      const db = 20*Math.log10(mag);
+      let ang = C.ang(H) * 180/Math.PI;
+
+      if (prevAngle !== null){
+        let diff = ang - prevAngle;
+        if (diff > 180) unwrapOffset -= 360;
+        else if (diff < -180) unwrapOffset += 360;
+      }
+      prevAngle = ang;
+      ang += unwrapOffset;
+
+      freqs[i] = f;
+      magDb[i] = db;
+      phaseDeg[i] = ang;
+
+      if (mag > peakVal){ peakVal = mag; peakIdx = i; }
+    }
+
+    // -3dB bandwidth around peak, with linear interpolation in log-f space
+    const peakDb = magDb[peakIdx];
+    const target = peakDb - 3;
+
+    function findLow(){
+      for (let i=peakIdx; i>0; i--){
+        const a=magDb[i], b=magDb[i-1];
+        if ((a-target)*(b-target) <= 0 && a!==b){
+          const frac=(target-a)/(b-a);
+          const logFa=Math.log10(freqs[i]), logFb=Math.log10(freqs[i-1]);
+          return { f: Math.pow(10, logFa+frac*(logFb-logFa)), approx:false };
+        }
+      }
+      return { f: freqs[0], approx:true };
+    }
+    function findHigh(){
+      for (let i=peakIdx; i<N_POINTS-1; i++){
+        const a=magDb[i], b=magDb[i+1];
+        if ((a-target)*(b-target) <= 0 && a!==b){
+          const frac=(target-a)/(b-a);
+          const logFa=Math.log10(freqs[i]), logFb=Math.log10(freqs[i+1]);
+          return { f: Math.pow(10, logFa+frac*(logFb-logFa)), approx:false };
+        }
+      }
+      return { f: freqs[N_POINTS-1], approx:true };
+    }
+
+    const low = findLow();
+    const high = findHigh();
+    const bw = high.f - low.f;
+    const qObserved = bw > 0 ? freqs[peakIdx]/bw : NaN;
+
+    return {
+      freqs, magDb, phaseDeg,
+      fmin, fmax,
+      peakIdx, peakFreq: freqs[peakIdx], peakDb,
+      bwLow: low, bwHigh: high, bandwidth: bw, qObserved,
+      f0ideal: f0
+    };
+  }
+
+  /* ---------------------------------------------------------------
+   * Controls
+   * ------------------------------------------------------------- */
+  const CONTROL_DEFS = [
+    { key:'L', label:'Inductance (L)' },
+    { key:'C', label:'Capacitance (C)' },
+    { key:'Rs', label:'Source resistance (Rs)' },
+    { key:'Rload', label:'Load resistance (Rload)' },
+  ];
+  const LOSS_DEFS = [
+    { key:'RLloss', label:'Inductor loss (Rℓ, series with L)' },
+    { key:'RCloss', label:'Capacitor loss (Rc, series with C)' },
+  ];
+
+  const controlRefs = {};
+
+  function buildControl(host, def){
+    const r = RANGES[def.key];
+    const row = document.createElement('div');
+    row.className = 'control-row';
+    row.innerHTML = `
+      <div class="control-head">
+        <label for="slider-${def.key}">${def.label}</label>
+        <input type="text" class="control-value" id="val-${def.key}" aria-label="${def.label} value">
+      </div>
+      <input type="range" id="slider-${def.key}" min="${r.min}" max="${r.max}" step="0.0015" aria-label="${def.label} slider">
+    `;
+    host.appendChild(row);
+
+    const slider = row.querySelector(`#slider-${def.key}`);
+    const valueEl = row.querySelector(`#val-${def.key}`);
+
+    function refresh(){
+      const v = state[def.key];
+      slider.value = Math.log10(v);
+      valueEl.value = formatEng(v, r.unit);
+    }
+    slider.addEventListener('input', () => {
+      state[def.key] = Math.pow(10, parseFloat(slider.value));
+      valueEl.value = formatEng(state[def.key], r.unit);
+      onParamsChanged();
+    });
+    valueEl.addEventListener('change', () => {
+      const parsed = parseEng(valueEl.value, r.unit);
+      if (parsed !== null && parsed > 0){
+        const clampedExp = Math.max(r.min, Math.min(r.max, Math.log10(parsed)));
+        state[def.key] = Math.pow(10, clampedExp);
+      }
+      refresh();
+      onParamsChanged();
+    });
+    valueEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') valueEl.blur(); });
+
+    refresh();
+    controlRefs[def.key] = { refresh };
+  }
+
+  function buildAllControls(){
+    const host = document.getElementById('controlsHost');
+    host.innerHTML = '';
+    CONTROL_DEFS.forEach(def => buildControl(host, def));
+
+    const lossGroup = document.createElement('div');
+    lossGroup.className = 'loss-group';
+    lossGroup.id = 'lossGroup';
+    lossGroup.innerHTML = `<span class="tag">Component losses — real LC resonator</span>`;
+    host.appendChild(lossGroup);
+    LOSS_DEFS.forEach(def => buildControl(lossGroup, def));
+  }
+
+  function refreshAllControls(){
+    Object.values(controlRefs).forEach(c => c.refresh());
+  }
+
+  /* Presets per topology */
+  const PRESETS = {
+    series: [
+      { label:'Underdamped', apply:(s)=>{ const rc=2*Math.sqrt(s.L/s.C); s.Rs=rc*0.05; s.Rload=rc*0.05; } },
+      { label:'Critically damped', apply:(s)=>{ const rc=2*Math.sqrt(s.L/s.C); s.Rs=rc/2; s.Rload=rc/2; } },
+      { label:'Overdamped', apply:(s)=>{ const rc=2*Math.sqrt(s.L/s.C); s.Rs=rc*2.5; s.Rload=rc*2.5; } }
+    ],
+    parallel: [
+      { label:'Lightly loaded (high Q)', apply:(s)=>{ s.Rs=8000; s.Rload=8000; } },
+      { label:'Moderately loaded', apply:(s)=>{ s.Rs=200; s.Rload=200; } },
+      { label:'Heavily loaded (low Q)', apply:(s)=>{ s.Rs=8; s.Rload=8; } }
+    ],
+    resonator: [
+      { label:'Near-ideal components', apply:(s)=>{ s.RLloss=0.01; s.RCloss=0.001; s.Rs=2000; s.Rload=2000; } },
+      { label:'Typical real components', apply:(s)=>{ s.RLloss=10; s.RCloss=1; s.Rs=50; s.Rload=1000; } },
+      { label:'Lossy, heavily loaded', apply:(s)=>{ s.RLloss=30; s.RCloss=3; s.Rs=50; s.Rload=120; } }
+    ]
+  };
+
+  function buildPresetRow(){
+    const row = document.getElementById('presetRow');
+    row.innerHTML = '';
+    PRESETS[state.topology].forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn';
+      btn.type = 'button';
+      btn.textContent = p.label;
+      btn.addEventListener('click', () => {
+        p.apply(state);
+        refreshAllControls();
+        onParamsChanged();
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  /* ---------------------------------------------------------------
+   * Schematic drawing
+   * ------------------------------------------------------------- */
+  function hResistor(x1,x2,y){
+    const bodyW = Math.min(58, Math.abs(x2-x1)*0.75);
+    const cx = (x1+x2)/2, bx1 = cx-bodyW/2, bx2 = cx+bodyW/2;
+    const amp = 9, steps = 6;
+    let d = `M ${x1} ${y} L ${bx1} ${y}`;
+    for (let i=1;i<steps;i++){
+      const t = i/steps;
+      const x = bx1 + (bx2-bx1)*t;
+      const yoff = (i%2===1) ? -amp : amp;
+      d += ` L ${x.toFixed(1)} ${(y+yoff).toFixed(1)}`;
+    }
+    d += ` L ${bx2} ${y} L ${x2} ${y}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function vResistor(x,y1,y2){
+    const bodyH = Math.min(58, Math.abs(y2-y1)*0.75);
+    const cy = (y1+y2)/2, by1 = cy-bodyH/2, by2 = cy+bodyH/2;
+    const amp = 9, steps = 6;
+    let d = `M ${x} ${y1} L ${x} ${by1}`;
+    for (let i=1;i<steps;i++){
+      const t = i/steps;
+      const y = by1 + (by2-by1)*t;
+      const xoff = (i%2===1) ? amp : -amp;
+      d += ` L ${(x+xoff).toFixed(1)} ${y.toFixed(1)}`;
+    }
+    d += ` L ${x} ${by2} L ${x} ${y2}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function hInductor(x1,x2,y){
+    const bodyW = Math.min(90, Math.abs(x2-x1)*0.8);
+    const cx = (x1+x2)/2, bx1 = cx-bodyW/2, bx2 = cx+bodyW/2;
+    const bumps = 4, w = (bx2-bx1)/bumps, amp = 11;
+    let d = `M ${x1} ${y} L ${bx1} ${y}`;
+    for (let i=0;i<bumps;i++){
+      d += ` c ${(w*0.25).toFixed(1)} ${(-amp*1.3).toFixed(1)} ${(w*0.75).toFixed(1)} ${(-amp*1.3).toFixed(1)} ${w.toFixed(1)} 0`;
+    }
+    d += ` L ${x2} ${y}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function vInductor(x,y1,y2){
+    const bodyH = Math.min(90, Math.abs(y2-y1)*0.8);
+    const cy = (y1+y2)/2, by1 = cy-bodyH/2, by2 = cy+bodyH/2;
+    const bumps = 4, h = (by2-by1)/bumps, amp = 11;
+    let d = `M ${x} ${y1} L ${x} ${by1}`;
+    for (let i=0;i<bumps;i++){
+      d += ` c ${(amp*1.3).toFixed(1)} ${(h*0.25).toFixed(1)} ${(amp*1.3).toFixed(1)} ${(h*0.75).toFixed(1)} 0 ${h.toFixed(1)}`;
+    }
+    d += ` L ${x} ${y2}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function hCapacitor(x1,x2,y){
+    const cx=(x1+x2)/2, gap=9, plateH=28;
+    const d = `M ${x1} ${y} L ${(cx-gap/2).toFixed(1)} ${y} `+
+      `M ${(cx-gap/2).toFixed(1)} ${(y-plateH/2).toFixed(1)} L ${(cx-gap/2).toFixed(1)} ${(y+plateH/2).toFixed(1)} `+
+      `M ${(cx+gap/2).toFixed(1)} ${(y-plateH/2).toFixed(1)} L ${(cx+gap/2).toFixed(1)} ${(y+plateH/2).toFixed(1)} `+
+      `M ${(cx+gap/2).toFixed(1)} ${y} L ${x2} ${y}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function vCapacitor(x,y1,y2){
+    const cy=(y1+y2)/2, gap=9, plateW=28;
+    const d = `M ${x} ${y1} L ${x} ${(cy-gap/2).toFixed(1)} `+
+      `M ${(x-plateW/2).toFixed(1)} ${(cy-gap/2).toFixed(1)} L ${(x+plateW/2).toFixed(1)} ${(cy-gap/2).toFixed(1)} `+
+      `M ${(x-plateW/2).toFixed(1)} ${(cy+gap/2).toFixed(1)} L ${(x+plateW/2).toFixed(1)} ${(cy+gap/2).toFixed(1)} `+
+      `M ${x} ${(cy+gap/2).toFixed(1)} L ${x} ${y2}`;
+    return `<path class="sch-wire" d="${d}"/>`;
+  }
+  function sourceSymbol(cx,cy,r){
+    const sine = `M ${(cx-r*0.52).toFixed(1)} ${cy} `+
+      `C ${(cx-r*0.26).toFixed(1)} ${(cy-r*0.62).toFixed(1)}, ${(cx-r*0.05).toFixed(1)} ${(cy-r*0.62).toFixed(1)}, ${cx} ${cy} `+
+      `C ${(cx+r*0.22).toFixed(1)} ${(cy+r*0.62).toFixed(1)}, ${(cx+r*0.45).toFixed(1)} ${(cy+r*0.62).toFixed(1)}, ${(cx+r*0.52).toFixed(1)} ${cy}`;
+    return `<circle class="sch-outline" cx="${cx}" cy="${cy}" r="${r}"/><path class="sch-outline" d="${sine}"/>`;
+  }
+  function ground(x,y){
+    return `<path class="sch-wire" d="M ${x-13} ${y} L ${x+13} ${y} M ${x-8} ${(y+6)} L ${x+8} ${(y+6)} M ${x-3.5} ${(y+12)} L ${x+3.5} ${(y+12)}"/>`;
+  }
+  function wire(x1,y1,x2,y2){ return `<path class="sch-wire" d="M ${x1} ${y1} L ${x2} ${y2}"/>`; }
+  function node(x,y){ return `<circle class="sch-node" cx="${x}" cy="${y}" r="3"/>`; }
+  function label(x,y,text,cls,anchor){ return `<text class="${cls}" x="${x}" y="${y}" text-anchor="${anchor||'middle'}">${text}</text>`; }
+
+  function buildSeriesSchematic(){
+    let s = '';
+    const srcX=68, srcY=122, r=26;
+    const topY=48, botY=204;
+    s += wire(srcX,srcY-r,srcX,topY);
+    s += wire(srcX,srcY+r,srcX,botY);
+    s += sourceSymbol(srcX,srcY,r);
+    s += label(srcX-40,srcY+4,'Vs','sch-label','middle');
+
+    s += wire(srcX,topY,120,topY);
+    s += hResistor(120,205,topY);
+    s += label(162,topY-16,'Rs','sch-label');
+    s += hInductor(205,320,topY);
+    s += label(262,topY-18,'L','sch-label');
+    s += hCapacitor(320,400,topY);
+    s += label(360,topY-16,'C','sch-label');
+    s += wire(400,topY,552,topY);
+    s += node(552,topY);
+
+    s += wire(552,topY,552,85);
+    s += vResistor(552,85,165);
+    s += label(575,128,'Rload','sch-label','start');
+    s += wire(552,165,552,botY);
+
+    s += wire(552,botY,srcX,botY);
+    s += ground(srcX,botY);
+
+    // Vout probes
+    s += `<path class="sch-dash" d="M 552 85 L 598 85 M 552 165 L 598 165"/>`;
+    s += label(604,88,'+','sch-probe','start');
+    s += label(604,168,'–','sch-probe','start');
+    s += label(604,130,'Vout','sch-label','start');
+
+    // value labels (ids for live update)
+    s += `<text id="sv-Rs" class="sch-value" x="162" y="${topY+30}" text-anchor="middle"></text>`;
+    s += `<text id="sv-L" class="sch-value" x="262" y="${topY+30}" text-anchor="middle"></text>`;
+    s += `<text id="sv-C" class="sch-value" x="360" y="${topY+30}" text-anchor="middle"></text>`;
+    s += `<text id="sv-Rload" class="sch-value" x="594" y="128" text-anchor="start"></text>`;
+    return s;
+  }
+
+  function buildParallelSchematic(withLoss){
+    let s = '';
+    const srcX=68, srcY=122, r=26;
+    const topY=48, botY=204;
+    s += wire(srcX,srcY-r,srcX,topY);
+    s += wire(srcX,srcY+r,srcX,botY);
+    s += sourceSymbol(srcX,srcY,r);
+    s += label(srcX-40,srcY+4,'Vs','sch-label');
+
+    s += wire(srcX,topY,120,topY);
+    s += hResistor(120,205,topY);
+    s += label(162,topY-16,'Rs','sch-label');
+
+    const nodeX=205;
+    s += wire(205,topY,nodeX,topY);
+    s += node(nodeX,topY);
+    s += wire(nodeX,topY,500,topY);
+    s += node(500,topY);
+
+    const bx = [300,400,500];
+    s += wire(srcX,botY,500,botY);
+    s += ground(srcX,botY);
+
+    if (!withLoss){
+      s += vInductor(bx[0],topY,botY);
+      s += label(bx[0]-30,100,'L','sch-label');
+      s += vCapacitor(bx[1],topY,botY);
+      s += label(bx[1]-32,100,'C','sch-label');
+    } else {
+      const midL = (topY+botY)/2 - 8, midC = (topY+botY)/2 - 8;
+      s += vResistor(bx[0],topY,midL-30);
+      s += vInductor(bx[0],midL-30,botY);
+      s += label(bx[0]+16,98,'Rℓ','sch-label','start');
+      s += label(bx[0]+16,150,'L','sch-label','start');
+
+      s += vResistor(bx[1],topY,midC-30);
+      s += vCapacitor(bx[1],midC-30,botY);
+      s += label(bx[1]+16,98,'Rc','sch-label','start');
+      s += label(bx[1]+16,150,'C','sch-label','start');
+    }
+    s += vResistor(bx[2],topY,botY);
+    s += label(bx[2]+16,124,'Rload','sch-label','start');
+
+    // Vout probe off to the right of node
+    s += `<path class="sch-dash" d="M 500 48 L 560 48 M 500 204 L 560 204"/>`;
+    s += label(566,52,'+','sch-probe','start');
+    s += label(566,208,'–','sch-probe','start');
+    s += label(566,130,'Vout','sch-label','start');
+
+    s += `<text id="sv-Rs" class="sch-value" x="162" y="${topY+30}" text-anchor="middle"></text>`;
+    if (!withLoss){
+      s += `<text id="sv-L" class="sch-value" x="${bx[0]-30}" y="118" text-anchor="start"></text>`;
+      s += `<text id="sv-C" class="sch-value" x="${bx[1]-32}" y="118" text-anchor="start"></text>`;
+    } else {
+      s += `<text id="sv-RLloss" class="sch-value" x="${bx[0]+16}" y="114" text-anchor="start"></text>`;
+      s += `<text id="sv-L" class="sch-value" x="${bx[0]+16}" y="166" text-anchor="start"></text>`;
+      s += `<text id="sv-RCloss" class="sch-value" x="${bx[1]+16}" y="114" text-anchor="start"></text>`;
+      s += `<text id="sv-C" class="sch-value" x="${bx[1]+16}" y="166" text-anchor="start"></text>`;
+    }
+    s += `<text id="sv-Rload" class="sch-value" x="${bx[2]+16}" y="140" text-anchor="start"></text>`;
+    return s;
+  }
+
+  const SCHEMATICS = {
+    series:   () => buildSeriesSchematic(),
+    parallel: () => buildParallelSchematic(false),
+    resonator:() => buildParallelSchematic(true)
+  };
+
+  function renderSchematic(){
+    const svg = document.getElementById('schematic');
+    svg.innerHTML = SCHEMATICS[state.topology]();
+    updateSchematicValues();
+  }
+
+  function updateSchematicValues(){
+    const map = {
+      'sv-Rs': formatEng(state.Rs,'Ω'),
+      'sv-Rload': formatEng(state.Rload,'Ω'),
+      'sv-L': formatEng(state.L,'H'),
+      'sv-C': formatEng(state.C,'F'),
+      'sv-RLloss': formatEng(state.RLloss,'Ω'),
+      'sv-RCloss': formatEng(state.RCloss,'Ω')
+    };
+    Object.entries(map).forEach(([id,text]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    });
+  }
+
+  /* ---------------------------------------------------------------
+   * Formula + copy text per topology
+   * ------------------------------------------------------------- */
+  const TOPO_INFO = {
+    series: {
+      heading: 'Series RLC — band-pass across the load',
+      note: 'Rs, L, C and Rload form a single loop. Current peaks at resonance (reactances cancel), so the voltage across Rload peaks too. A larger total series resistance damps and broadens the peak.',
+      formula: `H(jω) = Rload / (Rs + Rload + jωL + 1/(jωC))<div class="cap">ω₀ = 1/√(LC)  ·  Q ≈ (1/(Rs+Rload))·√(L/C)</div>`
+    },
+    parallel: {
+      heading: 'Parallel RLC — voltage divider into a tank',
+      note: 'L and C sit in parallel with Rload, fed through Rs. The tank\u2019s impedance is maximum at resonance, so the output voltage peaks there too \u2014 opposite sensitivity to loading than the series case.',
+      formula: `H(jω) = Zp / (Rs + Zp),  Zp = (1/(jωL) + jωC + 1/Rload)⁻¹<div class="cap">ω₀ = 1/√(LC)  ·  Q ≈ (Rs∥Rload)·√(C/L)</div>`
+    },
+    resonator: {
+      heading: 'Thevenin source + real LC resonator',
+      note: 'The inductor and capacitor each carry a series loss resistor (winding resistance and ESR). These losses — plus whatever Rload draws — set the achievable Q. Try the presets to compare near-ideal vs. lossy components.',
+      formula: `H(jω) = Zp / (Rs + Zp)<div class="cap">Zp = ( (Rℓ+jωL)⁻¹ + (Rc+1/(jωC))⁻¹ + 1/Rload )⁻¹</div>`
+    }
+  };
+
+  function renderFormula(){
+    const info = TOPO_INFO[state.topology];
+    document.getElementById('schemHeading').textContent = info.heading;
+    document.getElementById('topoNote').textContent = info.note;
+    document.getElementById('formulaBox').innerHTML = info.formula;
+  }
+
+  /* ---------------------------------------------------------------
+   * Stats panel
+   * ------------------------------------------------------------- */
+  function renderStats(result){
+    const z0 = Math.sqrt(state.L/state.C);
+    const rows = [
+      ['Resonance (ideal, 1/√LC)', formatEng(result.f0ideal,'Hz')],
+      ['Peak frequency (observed)', formatEng(result.peakFreq,'Hz')],
+      ['Peak |H|', `${result.peakDb.toFixed(2)} dB <small>(${Math.pow(10,result.peakDb/20).toFixed(3)}×)</small>`],
+      ['−3 dB bandwidth', formatEng(result.bandwidth,'Hz') + (result.bwLow.approx||result.bwHigh.approx ? ' <small>(beyond range)</small>' : '')],
+      ['Q (observed, f₀⁄BW)', isFinite(result.qObserved) ? result.qObserved.toFixed(2) : '—'],
+      ['Characteristic impedance √(L⁄C)', formatEng(z0,'Ω')],
+    ];
+    const grid = document.getElementById('statsGrid');
+    grid.innerHTML = rows.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  }
+
+  /* ---------------------------------------------------------------
+   * Charts
+   * ------------------------------------------------------------- */
+  const magCanvas = document.getElementById('magCanvas');
+  const phaseCanvas = document.getElementById('phaseCanvas');
+  const magTooltip = document.getElementById('magTooltip');
+  const phaseTooltip = document.getElementById('phaseTooltip');
+
+  let lastResult = null;
+  let hoverIdx = null;
+
+  function niceTicks(min, max, countHint){
+    const span = max - min;
+    const rough = span / countHint;
+    const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+    const norm = rough / mag;
+    let step;
+    if (norm < 1.5) step = 1*mag;
+    else if (norm < 3) step = 2*mag;
+    else if (norm < 7) step = 5*mag;
+    else step = 10*mag;
+    const start = Math.ceil(min/step)*step;
+    const ticks = [];
+    for (let v=start; v<=max+1e-9; v+=step) ticks.push(Math.round(v*1000)/1000);
+    return ticks;
+  }
+
+  function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function drawChart(canvas, freqs, values, opts){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return;
+    canvas.width = Math.round(rect.width*dpr);
+    canvas.height = Math.round(rect.height*dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const W = rect.width, H = rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    const margin = {left:46, right:14, top:12, bottom:26};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    const logMin = Math.log10(freqs[0]), logMax = Math.log10(freqs[freqs.length-1]);
+    const xFor = (f) => margin.left + (Math.log10(f)-logMin)/(logMax-logMin)*plotW;
+
+    let yMin = opts.yMin, yMax = opts.yMax;
+    if (opts.auto){
+      yMin = Math.min(...values); yMax = Math.max(...values);
+      const pad = (yMax-yMin)*0.1 || 1;
+      yMin -= pad; yMax += pad;
+    }
+    const yFor = (v) => margin.top + (1-(v-yMin)/(yMax-yMin))*plotH;
+
+    const gridColor = cssVar('--scope-grid');
+    const gridStrong = cssVar('--scope-grid-strong');
+    const muted = cssVar('--muted');
+    const borderColor = cssVar('--border');
+    const markerColor = cssVar('--marker-color');
+
+    ctx.font = '10.5px IBM Plex Mono, monospace';
+
+    // vertical decade gridlines
+    const startDecade = Math.floor(logMin), endDecade = Math.ceil(logMax);
+    for (let d=startDecade; d<=endDecade; d++){
+      const f = Math.pow(10,d);
+      if (f < freqs[0]*0.999 || f > freqs[freqs.length-1]*1.001) continue;
+      const x = xFor(f);
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x,margin.top); ctx.lineTo(x,margin.top+plotH); ctx.stroke();
+      ctx.fillStyle = muted; ctx.textAlign = 'center';
+      ctx.fillText(formatFreqShort(f)+'Hz', x, margin.top+plotH+17);
+    }
+
+    // horizontal gridlines
+    const yticks = niceTicks(yMin, yMax, 4);
+    yticks.forEach(t => {
+      const y = yFor(t);
+      ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left,y); ctx.lineTo(margin.left+plotW,y); ctx.stroke();
+      ctx.fillStyle = muted; ctx.textAlign = 'right';
+      ctx.fillText(String(t), margin.left-7, y+3.5);
+    });
+
+    // zero / reference line emphasis
+    if (opts.zeroLine !== undefined && opts.zeroLine >= yMin && opts.zeroLine <= yMax){
+      const y = yFor(opts.zeroLine);
+      ctx.strokeStyle = gridStrong; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left,y); ctx.lineTo(margin.left+plotW,y); ctx.stroke();
+    }
+
+    // resonance marker
+    if (opts.fMarker){
+      const x = xFor(opts.fMarker);
+      ctx.setLineDash([4,3]);
+      ctx.strokeStyle = markerColor; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(x,margin.top); ctx.lineTo(x,margin.top+plotH); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // trace
+    ctx.beginPath();
+    for (let i=0;i<freqs.length;i++){
+      const x = xFor(freqs[i]);
+      const y = yFor(Math.max(yMin, Math.min(yMax, values[i])));
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = opts.color; ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // hover crosshair
+    if (opts.hoverIdx !== null && opts.hoverIdx !== undefined){
+      const f = freqs[opts.hoverIdx], v = values[opts.hoverIdx];
+      const x = xFor(f), y = yFor(Math.max(yMin, Math.min(yMax, v)));
+      ctx.strokeStyle = muted; ctx.setLineDash([2,2]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x,margin.top); ctx.lineTo(x,margin.top+plotH); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+      ctx.fillStyle = opts.color; ctx.fill();
+      ctx.strokeStyle = cssVar('--panel-bg'); ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    ctx.strokeStyle = borderColor; ctx.lineWidth = 1;
+    ctx.strokeRect(margin.left+0.5, margin.top+0.5, plotW, plotH);
+
+    return { margin, plotW, plotH, logMin, logMax, xFor };
+  }
+
+  let magGeom = null, phaseGeom = null;
+
+  function redrawCharts(){
+    if (!lastResult) return;
+    const r = lastResult;
+    magGeom = drawChart(magCanvas, r.freqs, r.magDb, {
+      color: cssVar('--mag-color'),
+      yMin: -60, yMax: Math.max(10, Math.ceil(r.peakDb/10)*10 + 5),
+      auto: false,
+      zeroLine: 0,
+      fMarker: r.peakFreq,
+      hoverIdx
+    });
+    phaseGeom = drawChart(phaseCanvas, r.freqs, r.phaseDeg, {
+      color: cssVar('--phase-color'),
+      auto: true,
+      zeroLine: 0,
+      fMarker: r.peakFreq,
+      hoverIdx
+    });
+  }
+
+  function attachHover(canvas, tooltip, wrap){
+    canvas.addEventListener('mousemove', (e) => {
+      if (!lastResult) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const margin = { left:46, right:14 };
+      const plotW = rect.width - margin.left - margin.right;
+      const t = Math.max(0, Math.min(1, (x-margin.left)/plotW));
+      const logMin = Math.log10(lastResult.freqs[0]), logMax = Math.log10(lastResult.freqs[lastResult.freqs.length-1]);
+      const f = Math.pow(10, logMin + t*(logMax-logMin));
+      let idx = 0, best = Infinity;
+      const logF = Math.log10(f);
+      for (let i=0;i<lastResult.freqs.length;i++){
+        const d = Math.abs(Math.log10(lastResult.freqs[i]) - logF);
+        if (d < best){ best = d; idx = i; }
+      }
+      hoverIdx = idx;
+      redrawCharts();
+      const fVal = lastResult.freqs[idx];
+      const magV = lastResult.magDb[idx];
+      const phV = lastResult.phaseDeg[idx];
+      tooltip.innerHTML = `f = ${formatEng(fVal,'Hz')}<br>|H| = ${magV.toFixed(2)} dB<br>∠H = ${phV.toFixed(1)}°`;
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = '6px';
+      tooltip.classList.add('show');
+      const other = tooltip === magTooltip ? phaseTooltip : magTooltip;
+      other.innerHTML = tooltip.innerHTML;
+      other.style.left = x + 'px';
+      other.style.top = '6px';
+      other.classList.add('show');
+    });
+    canvas.addEventListener('mouseleave', () => {
+      hoverIdx = null;
+      redrawCharts();
+      magTooltip.classList.remove('show');
+      phaseTooltip.classList.remove('show');
+    });
+  }
+  attachHover(magCanvas, magTooltip);
+  attachHover(phaseCanvas, phaseTooltip);
+
+  /* ---------------------------------------------------------------
+   * Frequency range controls
+   * ------------------------------------------------------------- */
+  const fMinInput = document.getElementById('fMinInput');
+  const fMaxInput = document.getElementById('fMaxInput');
+  const autoToggle = document.getElementById('autoRangeToggle');
+
+  function syncFreqInputs(result){
+    fMinInput.value = result.fmin.toPrecision(4);
+    fMaxInput.value = result.fmax.toPrecision(4);
+    fMinInput.disabled = state.autoRange;
+    fMaxInput.disabled = state.autoRange;
+  }
+  autoToggle.addEventListener('change', () => {
+    state.autoRange = autoToggle.checked;
+    if (!state.autoRange){
+      state.fMin = lastResult.fmin;
+      state.fMax = lastResult.fmax;
+    }
+    recomputeAndDraw();
+  });
+  [fMinInput, fMaxInput].forEach(inp => {
+    inp.addEventListener('change', () => {
+      const vmin = parseFloat(fMinInput.value);
+      const vmax = parseFloat(fMaxInput.value);
+      if (isFinite(vmin) && isFinite(vmax) && vmin > 0 && vmax > vmin){
+        state.fMin = vmin; state.fMax = vmax;
+        recomputeAndDraw();
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------------
+   * Topology switching
+   * ------------------------------------------------------------- */
+  const lossGroupGetter = () => document.getElementById('lossGroup');
+
+  function setTopology(topo){
+    state.topology = topo;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.setAttribute('aria-selected', t.dataset.topo === topo ? 'true' : 'false');
+    });
+    const lg = lossGroupGetter();
+    if (lg) lg.classList.toggle('hidden', topo !== 'resonator');
+    renderSchematic();
+    renderFormula();
+    buildPresetRow();
+    recomputeAndDraw();
+  }
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => setTopology(t.dataset.topo));
+  });
+
+  /* ---------------------------------------------------------------
+   * Main recompute pipeline
+   * ------------------------------------------------------------- */
+  function onParamsChanged(){
+    updateSchematicValues();
+    recomputeAndDraw();
+  }
+
+  function recomputeAndDraw(){
+    const result = sweep();
+    lastResult = result;
+    renderStats(result);
+    syncFreqInputs(result);
+    redrawCharts();
+  }
+
+  /* ---------------------------------------------------------------
+   * Theme-change / resize redraw
+   * ------------------------------------------------------------- */
+  window.addEventListener('resize', () => redrawCharts());
+  if (window.matchMedia){
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => redrawCharts());
+  }
+  new ResizeObserver(() => redrawCharts()).observe(document.querySelector('.charts-panel'));
+
+  /* ---------------------------------------------------------------
+   * Init
+   * ------------------------------------------------------------- */
+  buildAllControls();
+  setTopology('series');
+
+})();
+</script>
+</body>
+</html>
