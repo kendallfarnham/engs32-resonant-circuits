@@ -190,7 +190,15 @@
 
   .schem-panel { grid-area: schem; }
   .ctrl-panel { grid-area: ctrl; }
-  .charts-panel { grid-area: charts; }
+  .charts-panel {
+    grid-area: charts;
+    position: sticky;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    align-self: start;
+  }
+  @media (max-width: 920px) {
+    .charts-panel { position: static; }
+  }
 
   svg#schematic {
     width: 100%;
